@@ -23,6 +23,11 @@ class WeekView: UIView {
         return stackView
     }()
     
+    private lazy var bottomLine: UIView = {
+        let view = UIView()
+        return view
+    }()
+    
     // MARK: - Variables
     
     private let config: FastisConfig.WeekView
@@ -55,6 +60,8 @@ class WeekView: UIView {
             self.stackView.addArrangedSubview(self.makeWeekLabel(for: weekdaySimbol))
         }
         self.addSubview(self.stackView)
+        self.addSubview(self.bottomLine)
+        self.bottomLine.backgroundColor = self.config.bottomLineColor
     }
     
     func makeWeekLabel(for simbol: String) -> UILabel {
@@ -71,6 +78,11 @@ class WeekView: UIView {
             maker.top.bottom.equalToSuperview()
             maker.left.right.equalToSuperview().inset(4)
         }
+        self.bottomLine.snp.makeConstraints { (maker) in
+            maker.bottom.equalToSuperview()
+            maker.left.right.equalToSuperview()
+            maker.height.equalTo(1)
+        }
         self.snp.makeConstraints { (maker) in
             maker.height.equalTo(self.config.height)
         }
@@ -82,6 +94,7 @@ extension FastisConfig {
     public struct WeekView {
         public var calendar: Calendar = .current
         public var backgroundColor: UIColor = .groupTableViewBackground
+        public var bottomLineColor: UIColor = .clear
         public var textColor: UIColor = .darkGray
         public var textFont: UIFont = .systemFont(ofSize: 10, weight: .bold)
         public var height: CGFloat = 28

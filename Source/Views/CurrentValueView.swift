@@ -28,6 +28,7 @@ class CurrentValueView<Value: FastisValue>: UIView {
         button.tintColor = self.config.clearButtonTintColor
         button.alpha = 0
         button.isUserInteractionEnabled = false
+        button.isHidden = true
         return button
     }()
     

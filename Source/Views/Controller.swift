@@ -18,6 +18,7 @@ public class FastisController<Value: FastisValue>: UIViewController, JTACMonthVi
         if let customButton = self.appearance.customCancelButton {
             customButton.target = self
             customButton.action = #selector(self.cancel)
+            customButton.tintColor = self.appearance.barButtonItemsColor
             return customButton
         }
         
@@ -37,6 +38,31 @@ public class FastisController<Value: FastisValue>: UIViewController, JTACMonthVi
         barButtonItem.tintColor = self.appearance.barButtonItemsColor
         barButtonItem.isEnabled = self.allowToChooseNilDate
         return barButtonItem
+    }()
+    
+    private lazy var doneButton: UIButton = {
+        let button = UIButton()
+        button.addTarget(self, action: #selector(self.done), for: .touchUpInside)
+        button.setTitle(self.appearance.doneButtonTitle, for: .normal)
+        button.setTitle(self.appearance.doneButtonTitle, for: .disabled)
+        button.titleLabel?.font = self.appearance.buttonItemsFont
+        button.backgroundColor = self.appearance.buttonItemsColor
+        button.layer.cornerRadius = 8
+        return button
+    }()
+    
+    private lazy var clearButton: UIButton = {
+        let button = UIButton()
+        button.addTarget(self, action: #selector(self.clear), for: .touchUpInside)
+        button.setTitle(self.appearance.clearButtonTitle, for: .normal)
+        button.setTitle(self.appearance.clearButtonTitle, for: .disabled)
+        button.setTitleColor(self.appearance.buttonItemsColor, for: .normal)
+        button.titleLabel?.font = self.appearance.buttonItemsFont
+        button.backgroundColor = .white
+        button.layer.borderColor = self.appearance.buttonItemsColor.cgColor
+        button.layer.borderWidth = 1
+        button.layer.cornerRadius = 8
+        return button
     }()
     
     private lazy var calendarView: JTACMonthView = {
@@ -59,18 +85,22 @@ public class FastisController<Value: FastisValue>: UIViewController, JTACMonthVi
         return WeekView(config: self.config.weekView)
     }()
     
+    private lazy var currentValueContainerView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .white
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOffset = CGSize(width: 0, height: 0)
+        view.layer.shadowRadius = 8.0
+        view.layer.shadowOpacity = 0.1
+        view.layer.masksToBounds = false
+        return view
+    }()
+    
     private lazy var currentValueView: CurrentValueView<Value> = {
         let view = CurrentValueView<Value>(config: self.config.currentValueView)
         view.currentValue = self.value
         view.onClear = {
-            self.value = nil
-            self.viewConfigs.removeAll()
-            self.calendarView.deselectAllDates()
-            self.calendarView.visibleDates { (segment) in
-                UIView.performWithoutAnimation {
-                    self.calendarView.reloadItems(at: (segment.outdates + segment.indates).map({ $0.indexPath }))
-                }
-            }
+            self.clear()
         }
         return view
     }()
@@ -237,28 +267,49 @@ public class FastisController<Value: FastisValue>: UIViewController, JTACMonthVi
         self.navigationController?.navigationBar.shadowImage = UIImage()
         self.navigationItem.largeTitleDisplayMode = .never
         self.navigationItem.leftBarButtonItem = self.cancelBarButtonItem
-        self.navigationItem.rightBarButtonItem = self.doneBarButtonItem
+        //self.navigationItem.rightBarButtonItem = self.doneBarButtonItem
     }
     
     private func configureSubviews() {
         self.calendarView.register(DayCell.self, forCellWithReuseIdentifier: self.dayCellReuseIdentifier)
         self.calendarView.register(MonthHeader.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: self.monthHeaderReuseIdentifier)
-        self.view.addSubview(self.currentValueView)
         self.view.addSubview(self.weekView)
         self.view.addSubview(self.calendarView)
         if !self.shortcuts.isEmpty {
             self.view.addSubview(self.shortcutContainerView)
         }
+        self.view.addSubview(self.currentValueContainerView)
+        self.currentValueContainerView.addSubview(self.currentValueView)
+        self.currentValueContainerView.addSubview(self.clearButton)
+        self.currentValueContainerView.addSubview(self.doneButton)
     }
     
     private func configureConstraints() {
+        self.currentValueContainerView.snp.makeConstraints { (maker) in
+            maker.bottom.left.right.equalToSuperview()
+            let window = UIApplication.shared.windows.first
+            let bottomPadding: CGFloat = window?.safeAreaInsets.bottom ?? 0
+            maker.height.equalTo(100 + bottomPadding)
+        }
+        self.clearButton.snp.makeConstraints { (maker) in
+            maker.top.equalToSuperview().inset(42)
+            maker.left.equalToSuperview().inset(16)
+            maker.width.equalTo(107)
+            maker.height.equalTo(48)
+        }
+        self.doneButton.snp.makeConstraints { (maker) in
+            maker.top.equalToSuperview().inset(42)
+            maker.left.equalTo(clearButton.snp.right).offset(8)
+            maker.right.equalToSuperview().inset(16)
+            maker.height.equalTo(48)
+        }
         self.currentValueView.snp.makeConstraints { (maker) in
-            maker.top.equalTo(self.view.safeAreaLayoutGuide)
+            maker.top.equalToSuperview().inset(10)
             maker.left.right.equalToSuperview().inset(12)
         }
         self.weekView.snp.makeConstraints { (maker) in
-            maker.top.equalTo(self.currentValueView.snp.bottom)
-            maker.left.right.equalToSuperview().inset(12)
+            maker.top.equalTo(self.view.safeAreaLayoutGuide)
+            maker.left.right.equalToSuperview()
         }
         if !self.shortcuts.isEmpty {
             self.shortcutContainerView.snp.makeConstraints { (maker) in
@@ -330,6 +381,17 @@ public class FastisController<Value: FastisValue>: UIViewController, JTACMonthVi
     @objc private func done() {
         self.doneHandler?(self.value)
         self.cancel()
+    }
+    
+    @objc private func clear() {
+        self.value = nil
+        self.viewConfigs.removeAll()
+        self.calendarView.deselectAllDates()
+        self.calendarView.visibleDates { (segment) in
+            UIView.performWithoutAnimation {
+                self.calendarView.reloadItems(at: (segment.outdates + segment.indates).map({ $0.indexPath }))
+            }
+        }
     }
     
     private func selectValue(_ value: Value?, in calendar: JTACMonthView) {
@@ -535,6 +597,9 @@ extension FastisConfig {
     public struct Controller {
         public var cancelButtonTitle: String = "Cancel"
         public var doneButtonTitle: String = "Done"
+        public var clearButtonTitle: String = "Clear"
+        public var buttonItemsColor: UIColor = .systemBlue
+        public var buttonItemsFont: UIFont = UIFont.boldSystemFont(ofSize: 16)
         public var titleTextAttributes: [NSAttributedString.Key: Any] = [:]
         public var backgroundColor: UIColor = .white
         public var barButtonItemsColor: UIColor = .systemBlue

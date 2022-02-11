@@ -27,6 +27,13 @@ class DayCell: JTACDayCell {
         return view
     }()
     
+    lazy var selectionCurrentDateView: UIView = {
+        let view = UIView()
+        view.isHidden = true
+        view.layer.borderWidth = 1
+        return view
+    }()
+    
     lazy var rangedBackgroundViewRoundedLeft: UIView = {
         let view = UIView()
         view.layer.masksToBounds = true
@@ -84,10 +91,12 @@ class DayCell: JTACDayCell {
         self.rangedBackgroundViewRoundedRight.layer.cornerRadius = config.rangeViewCornerRadius
         self.rangedBackgroundViewRoundedLeft.layer.cornerRadius = config.rangeViewCornerRadius
         self.selectionBackgroundView.backgroundColor = config.selectedBackgroundColor
+        self.selectionCurrentDateView.layer.borderColor = config.selectedBackgroundColor.cgColor
         self.dateLabel.font = config.dateLabelFont
         self.dateLabel.textColor = config.dateLabelColor
         if let cornerRadius = config.customSelectionViewCornerRadius {
-             self.selectionBackgroundView.layer.cornerRadius = cornerRadius
+            self.selectionBackgroundView.layer.cornerRadius = cornerRadius
+            self.selectionCurrentDateView.layer.cornerRadius = cornerRadius
         }
         self.rangedBackgroundViewTopBootomConstraints.forEach({
             $0.update(inset: config.rangedBackgroundViewInset)
@@ -99,8 +108,10 @@ class DayCell: JTACDayCell {
         self.contentView.addSubview(self.rangedBackgroundViewSquaredLeft)
         self.contentView.addSubview(self.rangedBackgroundViewRoundedRight)
         self.contentView.addSubview(self.rangedBackgroundViewSquaredRight)
+        self.contentView.addSubview(self.selectionCurrentDateView)
         self.contentView.addSubview(self.selectionBackgroundView)
         self.contentView.addSubview(self.dateLabel)
+        self.selectionCurrentDateView.layer.cornerRadius = .minimum(self.frame.width, self.frame.height) / 2
         self.selectionBackgroundView.layer.cornerRadius = .minimum(self.frame.width, self.frame.height) / 2
     }
     
@@ -133,6 +144,14 @@ class DayCell: JTACDayCell {
             maker.center.equalToSuperview()
             maker.width.equalTo(self.selectionBackgroundView.snp.height)
         }
+        self.selectionCurrentDateView.snp.makeConstraints { (maker) in
+            maker.height.equalTo(100).priority(.low)
+            maker.top.left.greaterThanOrEqualToSuperview()
+            maker.right.bottom.lessThanOrEqualToSuperview()
+            maker.center.equalToSuperview()
+            maker.width.equalTo(self.selectionCurrentDateView.snp.height)
+        }
+        
         self.dateLabel.snp.makeConstraints { (maker) in
             maker.edges.equalToSuperview()
         }
@@ -141,7 +160,7 @@ class DayCell: JTACDayCell {
     public static func makeViewConfig(for state: CellState, minimumDate: Date?, maximumDate: Date?, rangeValue: FastisRange?) -> ViewConfig {
         
         var config = ViewConfig()
-        
+        config.isSelectionCurrentDateViewHidden = state.date.isInSameDay(date: Date()) == false
         if state.dateBelongsTo != .thisMonth {
             
             config.isSelectedViewHidden = true
@@ -266,6 +285,7 @@ class DayCell: JTACDayCell {
     struct ViewConfig {
         var dateLabelText: String?
         var isSelectedViewHidden: Bool = true
+        var isSelectionCurrentDateViewHidden: Bool = true
         var isDateEnabled: Bool = true
         var rangeView: RangeViewConfig = RangeViewConfig()
     }
@@ -273,6 +293,7 @@ class DayCell: JTACDayCell {
     internal func configure(for config: ViewConfig) {
         
         self.selectionBackgroundView.isHidden = config.isSelectedViewHidden
+        self.selectionCurrentDateView.isHidden = config.isSelectionCurrentDateViewHidden
         self.isUserInteractionEnabled = config.dateLabelText != nil && config.isDateEnabled
         
         if let dateLabelText = config.dateLabelText {
