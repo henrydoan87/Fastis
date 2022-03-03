@@ -311,6 +311,7 @@ class DayCell: JTACDayCell {
             
         } else {
             self.dateLabel.isHidden = true
+            self.selectionCurrentDateView.isHidden = true
         }
         
         self.rangedBackgroundViewRoundedLeft.isHidden = config.rangeView.roundedLeftHidden
